@@ -63,6 +63,34 @@ void war_state_test::cb_string(const std_msgs::String::ConstPtr &msg){
         std::cout << "str is nothing" << std::endl;
     }
 
+    //targets
+    BOOST_FOREACH (const boost::property_tree::ptree::value_type& child, pt.get_child("targets")) {
+        const boost::property_tree::ptree& info = child.second;
+
+        //targets.name
+        if (boost::optional<std::string> name = info.get_optional<std::string>("name")) {
+            std::cout << "name : " << name.get() << std::endl;
+        }
+        else {
+            std::cout << "name is nothing" << std::endl;
+        }
+
+        //target.player
+        if (boost::optional<std::string> player = info.get_optional<std::string>("player")) {
+            std::cout << "player : " << player.get() << std::endl;
+        }
+        else {
+            std::cout << "player is nothing" << std::endl;
+        }
+
+        //target.point
+        if (boost::optional<std::string> point = info.get_optional<std::string>("point")) {
+            std::cout << "point : " << point.get() << std::endl;
+        }
+        else {
+            std::cout << "point is nothing" << std::endl;
+        }
+    }
     //ROS_INFO("%s",data.data.c_str());
 }
 
