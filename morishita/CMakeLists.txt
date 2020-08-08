@@ -135,6 +135,9 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/morishita_node.cpp)
 add_executable(war_state_test src/war_state_test.cpp)
+add_executable(war_state_move src/war_state_move.cpp)
+add_executable(navigation_goal_test src/navigation_goal_test.cpp)
+add_executable(simple_navigation src/simple_navigation.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,6 +154,9 @@ add_executable(war_state_test src/war_state_test.cpp)
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(war_state_test ${catkin_LIBRARIES})
+target_link_libraries(war_state_move ${catkin_LIBRARIES})
+target_link_libraries(navigation_goal_test ${catkin_LIBRARIES})
+target_link_libraries(simple_navigation ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -206,3 +212,4 @@ target_link_libraries(war_state_test ${catkin_LIBRARIES})
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+add_definitions(-std=c++11)
