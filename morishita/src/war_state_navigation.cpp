@@ -47,8 +47,18 @@ class war_state_navigation{
     void cb_Pose_2D(const geometry_msgs::Pose2D::ConstPtr &msg);
 
     //関数
+    //状況に応じた目標マーカ位置設定
+    void set_near_free_marker_target(geometry_msgs::Pose2D current_my_position);
     void set_near_marker_target(geometry_msgs::Pose2D current_my_position);
+    void set_far_marker_target(geometry_msgs::Pose2D current_my_position, geometry_msgs::Pose2D current_opponent_position);
+
+    //相手を追いかける動作
+    void approach_opponent(geometry_msgs::Pose2D current_opponent_position);
+    void serch_opponent_position(geometry_msgs::Pose2D current_my_position);
+
+    //目標位置を設定する際の関数
     void navigation_goal_set(double x,double y,double theta);
+
 
     //ノードハンドラ作成
 	ros::NodeHandle nh;
@@ -96,7 +106,7 @@ class war_state_navigation{
     //1:running
 
     //フィールド情報
-    int field_info[18];
+    int field_info[18][2];
     //配列順番
     //Blue            0:B.1:L.2:R
     //Red             3:B.4:L.5:R
@@ -105,8 +115,12 @@ class war_state_navigation{
     //Pudding         10:N.11:S
     //OctopusWiener   12:N.13:S
     //FriedShrimp     14:N.15:E.16:W.17:S
+
     //値の意味
+    //[][0]:どちらがマーカを取得したか
     //0：フリー、1：こちらが取得、-1：相手が取得
+    //[][1]:目的地に設定したことがあるか
+    //0:ない、1:ある
 
     //フィールドのマーカを読み取るために移動する位置
     //順番はフィールド情報と同じ
@@ -133,12 +147,23 @@ class war_state_navigation{
 
     //自己位置推定の結果
     geometry_msgs::Pose2D amcl_position;
+    //カメラから得られる相手の推定値
+    geometry_msgs::Pose2D opponent_position;
 
-    //カメラによって相手の位置が取得できているかのフラグ
+    //カメラによって10秒以内に相手の位置が取得できているかのフラグ
     int camera_flag = -1;
     //値の意味
     //1:相手の位置が取得出来ている
     //-1:相手の位置は取得できていない
+
+    //カメラで相手の位置を取得できた時間
+    ros::Time camera_time;
+
+    //探索時の原点
+    geometry_msgs::Pose2D origin_position;
+
+    //90s後に一度だけ実行したい関数のためのフラグ
+    int once_flag = 1;
 };
 
 //コンストラクタ
@@ -153,11 +178,20 @@ war_state_navigation::war_state_navigation(){
 
     //時間で起動する関数の定義
     timer = nh.createTimer(ros::Duration(1.0), &war_state_navigation::cb_time_control,this);
+
+    //探索時の原点を設定
+    origin_position.x = -1.0;
+    origin_position.y = 0.0;
+    origin_position.theta = 0.0;
+
+    for(int i = 0;i<18;i++){
+        field_info[i][1] = 0;
+    }
 }
 
 
 
-//関数定義
+//コールバック関数
 void war_state_navigation::cb_war_state(const std_msgs::String::ConstPtr &msg){
     //データ受信
     std_msgs::String data = *msg;
@@ -204,7 +238,7 @@ void war_state_navigation::cb_war_state(const std_msgs::String::ConstPtr &msg){
         else {
             std::cout << "b_point is nothing" << std::endl;
         }
-        ROS_INFO("red = %d, blue = %d",r_point,b_point);
+        //ROS_INFO("red = %d, blue = %d",r_point,b_point);
         //フィールド情報を取得
         int roop_number = 0;
         BOOST_FOREACH (const boost::property_tree::ptree::value_type& child, pt.get_child("targets")) {
@@ -214,13 +248,13 @@ void war_state_navigation::cb_war_state(const std_msgs::String::ConstPtr &msg){
             if (boost::optional<std::string> player = info.get_optional<std::string>("player")) {
                 //std::cout << "player : " << player.get() << std::endl;
                 if(!(player.get().compare("r"))){
-                    field_info[roop_number] = 1;
+                    field_info[roop_number][0] = 1;
                 }else if(!(player.get().compare("b"))){
-                    field_info[roop_number] = -1;
+                    field_info[roop_number][0] = -1;
                 }else{
-                    field_info[roop_number] = 0;
+                    field_info[roop_number][0] = 0;
                 }
-                //ROS_INFO("%d,%d",roop_number,field_info[roop_number]);
+                ROS_INFO("%d,%d,%d",roop_number,field_info[roop_number][0], field_info[roop_number][1]);
             }
             else {
                 std::cout << "player is nothing" << std::endl;
@@ -256,44 +290,97 @@ void war_state_navigation::cb_amcl_pose(const geometry_msgs::PoseWithCovarianceS
     amcl_position.theta = yaw;
 }
 
+void war_state_navigation::cb_Pose_2D(const geometry_msgs::Pose2D::ConstPtr &msg){
+    //カメラで相手の位置が取得出来ていない場合、前回取得した時から10秒経っている場合camera_flagをおる
+    if((msg.get()->x < 0) && (msg.get()->y < 0) && (msg.get()->theta < 0)){
+        if((ros::Time::now() - camera_time).toSec() > 10.0){
+            camera_flag = -1;
+        }
+    }
+    //カメラで相手の位置を取得した場合、時間を記録、camera_flagを立ててマップ上の位置を計算
+    else{
+        camera_time = ros::Time::now();
+        camera_flag = 1;
+        opponent_position.x = amcl_position.x + msg.get()->x * cos(amcl_position.theta) - msg.get()->y * sin(amcl_position.theta);
+        opponent_position.y = amcl_position.y + msg.get()->x * sin(amcl_position.theta) + msg.get()->y * cos(amcl_position.theta);
+        //opponent_position.theta = amcl_position.theta + msg.get()->theta;
+    }
+}
+
 //関数
 //1秒周期に実行される制御関数
 void war_state_navigation::cb_time_control(const ros::TimerEvent&){
     //試合が開始していて、navigationのstatus_idが1以外なら自律移動していないと考えて、状態に応じて目標地点、行動を与える
     if(start_flag == 1 && status_id != 1){
-        //試合時間が90秒以下なら、近くのマーカを取得
-        if(current_time < 180.0){
-            //自分が取得していない近くのマーカを検索して目標地点に設定
-            war_state_navigation::set_near_marker_target(amcl_position);
-        }else{
-            ROS_INFO("180s over");
+        //試合時間が90秒以下なら、誰も取得していない近くのマーカを取得
+        if(current_time < 90.0){
+            //誰も取得していない近くのマーカを検索して目標地点に設定
+            war_state_navigation::set_near_free_marker_target(amcl_position);
+            ROS_INFO("set_near_free_marker_target");
         }
-        /*
-        //90秒以上経過しているなら、得点差と相手の位置が取得できているかに応じて行動を決める
-        else if(current_time > 90.0){
-            //相手の位置が取得できていて引き分けもしくは勝っているなら、相手から離れて自分が取得していないマーカを目標地点に設定
-            if(camera_flag == 1 && r_point >= b_point){
+        //90秒以上180秒以下で、
+        //勝っている-相手の位置が分かっている-相手から離れた位置のマーカを取りに行く
+        //          -相手の位置が分かっていない-近くのフリーor相手のマーカを取りに行く、マーカを取り終えたら初期位置に戻る
+        //負けている-相手の位置が分かっている-相手の近くに目標地点を設定する
+        //          -相手の位置が分かっていない-相手の位置を探索する
+        else if(90.0 < current_time && current_time < 180.0){
 
+            //一度だけ目標地点履歴を削除
+            if(once_flag == 1){
+                for(int i = 0;i<18;i++){
+                    field_info[i][1] = 0;
+                }
+                once_flag = -1;
             }
-            //相手の位置が取得出来ていなくて引き分けもしくは勝っているなら、自分が取得していない近くのマーカを検索して目標地点に設定
-            else if(camera_flag == 0){
 
+            //勝っている
+            if(r_point >= b_point){
+                //相手の位置が分かっている
+                if(camera_flag == 1){
+                    //相手から離れた位置のマーカを取りに行く
+                    war_state_navigation::set_far_marker_target(amcl_position, opponent_position);
+                    ROS_INFO("set_far_marker_target");
+                }
+                //相手の位置が分かっていない
+                else{
+                    //近くの自分のではないマーカを取りに行く
+                    war_state_navigation::set_near_marker_target(amcl_position);
+                    ROS_INFO("set_near_marker_target");
+                }
             }
-
+            //負けている
+            else{
+                //相手の位置が分かっている
+                if(camera_flag == 1){
+                    //相手の近くに目標地点を設定する
+                    war_state_navigation::approach_opponent(opponent_position);
+                    ROS_INFO("approach_opponent");
+                }
+                //相手の位置が分かっていない
+                else{
+                    //相手の位置を探索する
+                    war_state_navigation::serch_opponent_position(amcl_position);
+                    ROS_INFO("serch_opponent_position");
+                }
+            }
         }
-        */
+        //180秒以上は試合終了と考えて何もしない
+        else{
+            //何もしない
+        }
     }
-   
 }
 
+//マーカを取りに行く
 //自己位置推定の結果から一番近くのマーカに目標位置を設定
-void war_state_navigation::set_near_marker_target(geometry_msgs::Pose2D current_my_position){
+//フリーなマーカのみ取得
+void war_state_navigation::set_near_free_marker_target(geometry_msgs::Pose2D current_my_position){
     //一番近くで自分のマーカではない位置を探索
     double min_distance = 100.0;
     int target_number = -1;
     for(int i=6; i<18; i++){
-        //誰も取得していないマーカまでの距離を計算する
-        if(field_info[i] == 0){
+        //誰も取得していないかつ自分が設定したことないマーカまでの距離を計算する
+        if(field_info[i][0] == 0 && field_info[i][1] == 0){
             double distance = sqrt( (pow((current_my_position.x - field_marker_position[i].x),2)) + (pow((current_my_position.y - field_marker_position[i].y), 2) ));
             if(distance < min_distance){
                 min_distance = distance;
@@ -302,14 +389,105 @@ void war_state_navigation::set_near_marker_target(geometry_msgs::Pose2D current_
         }
     }
 
-    //target_numberが-1以外なら目標マーカの設定を行う
+    //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
+    //target_numberが-1なら初期位置に退避
     if(target_number != -1){
         war_state_navigation::navigation_goal_set(field_marker_position[target_number].x, field_marker_position[target_number].y, field_marker_position[target_number].theta);
+        field_info[target_number][1] = 1;
     }else{
+        war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
         ROS_INFO("target_number lost");
     }
-    
 }
+
+//相手・フリーなマーカを取得
+void war_state_navigation::set_near_marker_target(geometry_msgs::Pose2D current_my_position){
+    //一番近くで自分のマーカではない位置を探索
+    double min_distance = 100.0;
+    int target_number = -1;
+    for(int i=6; i<18; i++){
+        //相手もしくはフリーかつ自分が設定したことないマーカまでの距離を計算する
+        if(field_info[i][0] != 1 && field_info[i][1] == 0){
+            double distance = sqrt( (pow((current_my_position.x - field_marker_position[i].x),2)) + (pow((current_my_position.y - field_marker_position[i].y), 2) ));
+            if(distance < min_distance){
+                min_distance = distance;
+                target_number = i;
+            }
+        }
+    }
+
+    //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
+    //target_numberが-1なら初期位置に退避
+    if(target_number != -1){
+        war_state_navigation::navigation_goal_set(field_marker_position[target_number].x, field_marker_position[target_number].y, field_marker_position[target_number].theta);
+        field_info[target_number][1] = 1;
+    }else{
+        war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
+        //ROS_INFO("target_number lost");
+    }
+}
+
+//相手から遠い位置のマーカを取得
+void war_state_navigation::set_far_marker_target(geometry_msgs::Pose2D current_my_position, geometry_msgs::Pose2D current_opponent_position){
+    //一番近くで自分のマーカではない位置を探索
+    double min_distance = 100.0;
+    int target_number = -1;
+    for(int i=6; i<18; i++){
+        //相手もしくはフリーかつ相手からの距離が最も遠いマーカまでの距離を計算する
+        if(field_info[i][0] != 1 && field_info[i][1] == 0){
+            double distance = sqrt( (pow((current_opponent_position.x - field_marker_position[i].x),2)) + (pow((current_opponent_position.y - field_marker_position[i].y), 2) ));
+            if(distance < min_distance){
+                min_distance = distance;
+                target_number = i;
+            }
+        }
+    }
+
+    //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
+    //target_numberが-1なら初期位置に退避
+    if(target_number != -1){
+        war_state_navigation::navigation_goal_set(field_marker_position[target_number].x, field_marker_position[target_number].y, field_marker_position[target_number].theta);
+        field_info[target_number][1] = 1;
+    }else{
+        war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
+        //ROS_INFO("target_number lost");
+    }
+}
+
+//相手に近づく
+//角度はランダム
+void war_state_navigation::approach_opponent(geometry_msgs::Pose2D current_opponent_position){
+    //乱数生成器
+    static std::mt19937_64 mt64(0);
+
+    // [0, 2pi] の一様分布整数 (int) の分布生成器
+    std::uniform_real_distribution<double> get_rand_uni_double(-3.14,3.14);
+
+    war_state_navigation::navigation_goal_set(current_opponent_position.x, current_opponent_position.y, get_rand_uni_double(mt64));
+}
+
+//相手を探索
+//初期位置から回転して相手の位置を探索する
+void war_state_navigation::serch_opponent_position(geometry_msgs::Pose2D current_my_position){
+    //原点からxy座標は+-0.15、thetaは+-0.1以内でなければ初期位置に目標位置を設定する
+    double xy_diff_tolerance = 0.15;
+    double theta_diff_tolerance = 0.1;
+    if(!(((origin_position.x-xy_diff_tolerance) < current_my_position.x) && (current_my_position.x < (origin_position.x+xy_diff_tolerance)) && ((origin_position.y-xy_diff_tolerance) < current_my_position.y) && (current_my_position.y < (origin_position.y+xy_diff_tolerance)) && ((origin_position.theta-theta_diff_tolerance) < current_my_position.theta) && (current_my_position.theta < (origin_position.theta+theta_diff_tolerance)))){
+        war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
+    }
+    //位置はそのままでランダムな角度を入れてその場で回転する
+    else{
+        //乱数生成器
+        static std::mt19937_64 mt64(0);
+
+        // [0, 2pi] の一様分布整数 (int) の分布生成器
+        std::uniform_real_distribution<double> get_rand_uni_double(-3.14,3.14);
+
+        //乱数で目標角度を決定
+        war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,get_rand_uni_double(mt64));
+    }
+}
+
 
 //navigationの目的地を設定して、Publishする
 void war_state_navigation::navigation_goal_set(double x,double y,double theta){
