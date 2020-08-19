@@ -129,6 +129,6 @@ class RandomBot():
 
 if __name__ == '__main__':
     rospy.init_node('ball_recognition_test')
-    bot = RandomBot(True, 'ball_recogtion_bot')
+    bot = RandomBot(False, 'ball_recogtion_bot')
     bot.strategy()
 
