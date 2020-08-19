@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="side" default="r"/> <!-- "b" = blue side, "r" = red side  -->
+
+    <!-- You can change control program  -->
+
+
+    <!-- sample program node -->
+    <include file="$(find burger_navigation)/launch/burger_navigation.launch" >
+    </include>
+
+    <node pkg="burger_war" type="ball_recognition_test.py" name="ball_recognition_test" output="screen"/>
+    <node pkg="burger_war" type="cam_ball_recognition.py" name="cam_ball_recognition" output="screen"/>
+    <node pkg="burger_war" type="cbr_subscriber.py" name="cbr_subscriber" output="screen"/>
+
+    <!-- END sample program node -->
+
+
+    <!-- End of your space  -->
+</launch>
+

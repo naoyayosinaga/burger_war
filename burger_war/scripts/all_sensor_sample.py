@@ -63,8 +63,8 @@ class AllSensorBot(object):
         while not rospy.is_shutdown():
             # update twist
             twist = Twist()
-            twist.linear.x = 0.1; twist.linear.y = 0; twist.linear.z = 0
-            twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = 0
+            //twist.linear.x = 0.1; twist.linear.y = 0; twist.linear.z = 0
+            //twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = 0
 
             # publish twist topic
             self.vel_pub.publish(twist)
