@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Arguments -->
+    <arg name="name_space" default=""/>
+    <arg name="output" default="log"/>
+
+    <node name="joy_node" pkg="joy" type="joy_node" />
+    <node pkg="burger_war" type="level_4_manual_control.py" name="manual_control" output="$(arg output)"/>
+</launch>
+

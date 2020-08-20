@@ -9,9 +9,7 @@
     <include file="$(find burger_navigation)/launch/burger_navigation.launch" >
     </include>
 
-    <node pkg="burger_war" type="ball_recognition_test.py" name="ball_recognition_test" output="screen"/>
-    <node pkg="burger_war" type="cam_ball_recognition.py" name="cam_ball_recognition" output="screen"/>
-    <node pkg="burger_war" type="cbr_subscriber.py" name="cbr_subscriber" output="screen"/>
+    <node pkg="morishita" type="war_state_navigation" name="war_state_navigation" respawn="true" output="screen"/>
 
     <!-- END sample program node -->
 

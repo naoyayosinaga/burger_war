@@ -29,6 +29,13 @@
         <arg name="name_space" value="enemy_bot" />
       </include>  
     </group>
+
+    <!-- level 4 (if you want to run , set launch arg enemy_level=4 --> 
+    <group if="$(eval enemy_level==4)"> 
+      <include file="$(find burger_war)/launch/sim_level_4_manual_control.launch">
+        <arg name="name_space" value="enemy_bot" />
+      </include>  
+    </group>
   </group>
 
 </launch>
