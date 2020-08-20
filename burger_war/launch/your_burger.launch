@@ -9,8 +9,7 @@
     <include file="$(find burger_navigation)/launch/burger_navigation.launch" >
     </include>
 
-    <node name="joy_node" pkg="joy" type="joy_node" />
-    <node pkg="burger_war" type="joy_control.py" name="joy_control" output="screen"/>
+    <node pkg="morishita" type="war_state_navigation" name="war_state_navigation" respawn="true" output="screen"/>
 
     <!-- END sample program node -->
 
