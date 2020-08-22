@@ -25,6 +25,8 @@
 #include <boost/foreach.hpp>
 #include <boost/optional.hpp>
 
+#include <string> 
+
 #define grid_size 1.0
 #define two_marker_x 0.1
 #define two_marker_y 0.5
@@ -64,7 +66,6 @@ class war_state_navigation{
 
     //ノードハンドラ作成
 	ros::NodeHandle nh;
-    
     //時間の関数作成
     ros::Timer timer;
 
@@ -99,8 +100,8 @@ class war_state_navigation{
     double current_time = 0.0;
 
     //自分と相手のスコア
-    int r_point = 0;
-    int b_point = 0;
+    int our_point = 0;
+    int opponent_point = 0;
 
     //試合が始まっているか判断するフラグ
     int start_flag = -1;
@@ -176,8 +177,8 @@ class war_state_navigation{
     //探索時の原点
     geometry_msgs::Pose2D origin_position;
 
-    //90s後に一度だけ実行したい関数のためのフラグ
-    int once_flag = 1;
+    //自分のチームのサイド(赤、青)
+    std::string our_side;
     
 };
 
@@ -197,9 +198,24 @@ war_state_navigation::war_state_navigation(){
     timer = nh.createTimer(ros::Duration(1.0), &war_state_navigation::cb_time_control,this);
 
     //探索時の原点を設定
-    origin_position.x = -1.0;
-    origin_position.y = 0.0;
-    origin_position.theta = 0.0;
+    //rosparamからサイド情報を取得
+    nh.getParam("/war_state_navigation/side", our_side);
+    ROS_INFO("%s",our_side.data());
+    //赤の場合
+    if(!(our_side.compare("r"))){
+        origin_position.x = -1.0;
+        origin_position.y = 0.0;
+        origin_position.theta = 0.0;
+        ROS_INFO("Our side is RED");
+    }
+    //青の場合
+    else{
+        origin_position.x = 1.0;
+        origin_position.y = 0.0;
+        origin_position.theta = M_PI;
+        ROS_INFO("Our side is BLUE");
+    }
+    
 
     //field_infoの初期化
     for(int i = 0;i<18;i++){
@@ -241,22 +257,43 @@ void war_state_navigation::cb_war_state(const std_msgs::String::ConstPtr &msg){
     //start_flagが立っていたら他の値も取得する
     if(start_flag ==1){
         //スコアを取得
-        //scores.r
-        if (boost::optional<int> value = pt.get_optional<int>("scores.r")) {
-            r_point = value.get();
-            //std::cout << " scores.r: " << value.get() << std::endl;
+        //sideが赤なら
+        if(!our_side.compare("r")){
+            if (boost::optional<int> value = pt.get_optional<int>("scores.r")) {
+                our_point = value.get();
+                //std::cout << " scores.r: " << value.get() << std::endl;
+            }
+            else {
+                std::cout << "r_point is nothing" << std::endl;
+            }
+            //scores.b
+            if (boost::optional<int> value = pt.get_optional<int>("scores.b")) {
+                opponent_point = value.get();
+                //std::cout << " scores.b: " << value.get() << std::endl;
+            }
+            else {
+                std::cout << "b_point is nothing" << std::endl;
+            }
         }
-        else {
-            std::cout << "r_point is nothing" << std::endl;
+        //sideが青なら
+        else{
+            if (boost::optional<int> value = pt.get_optional<int>("scores.r")) {
+                opponent_point = value.get();
+                //std::cout << " scores.r: " << value.get() << std::endl;
+            }
+            else {
+                std::cout << "r_point is nothing" << std::endl;
+            }
+            //scores.b
+            if (boost::optional<int> value = pt.get_optional<int>("scores.b")) {
+                our_point = value.get();
+                //std::cout << " scores.b: " << value.get() << std::endl;
+            }
+            else {
+                std::cout << "b_point is nothing" << std::endl;
+            }
         }
-        //scores.b
-        if (boost::optional<int> value = pt.get_optional<int>("scores.b")) {
-            b_point = value.get();
-            //std::cout << " scores.b: " << value.get() << std::endl;
-        }
-        else {
-            std::cout << "b_point is nothing" << std::endl;
-        }
+        
         //ROS_INFO("red = %d, blue = %d",r_point,b_point);
         //フィールド情報を取得
         int roop_number = 0;
@@ -266,12 +303,12 @@ void war_state_navigation::cb_war_state(const std_msgs::String::ConstPtr &msg){
             //target.player
             if (boost::optional<std::string> player = info.get_optional<std::string>("player")) {
                 //std::cout << "player : " << player.get() << std::endl;
-                if(!(player.get().compare("r"))){
+                if(!(player.get().compare(our_side.data()))){
                     field_info[roop_number][0] = 1;
-                }else if(!(player.get().compare("b"))){
-                    field_info[roop_number][0] = -1;
-                }else{
+                }else if(!(player.get().compare("n"))){
                     field_info[roop_number][0] = 0;
+                }else{
+                    field_info[roop_number][0] = -1;
                 }
                 //ROS_INFO("%d,%d,%d",roop_number,field_info[roop_number][0], field_info[roop_number][1]);
             }
@@ -325,9 +362,9 @@ void war_state_navigation::cb_Pose_2D(const geometry_msgs::Pose2D::ConstPtr &msg
         opponent_position.x = amcl_position.x + (msg.get()->x/1000.0) * cos(amcl_position.theta) - (msg.get()->y/1000.0) * sin(amcl_position.theta);
         opponent_position.y = amcl_position.y + (msg.get()->x/1000.0) * sin(amcl_position.theta) + (msg.get()->y/1000.0) * cos(amcl_position.theta);
 
-        ROS_INFO("my x %f y %f", amcl_position.x, amcl_position.y);
-        ROS_INFO("data x %f y %f",msg.get()->x,msg.get()->y);
-        ROS_INFO("opp x %f y %f",opponent_position.x, opponent_position.y);
+        //ROS_INFO("my x %f y %f", amcl_position.x, amcl_position.y);
+        //ROS_INFO("data x %f y %f",msg.get()->x,msg.get()->y);
+        //ROS_INFO("opp x %f y %f",opponent_position.x, opponent_position.y);
 
         //opponent_position.theta = amcl_position.theta + msg.get()->theta;
         //visual
@@ -368,7 +405,10 @@ void war_state_navigation::cb_time_control(const ros::TimerEvent&){
         if(current_time < 1000.0){
             //誰も取得していない近くのマーカを検索して目標地点に設定
             war_state_navigation::set_near_free_marker_target(amcl_position);
+            //war_state_navigation::serch_opponent_position(amcl_position);
         }
+
+        //以下修正ーーーーーーー
         //180秒以下で、
         //勝っている-相手の位置が分かっている-相手から離れた位置のマーカを取りに行く
         //          -相手の位置が分かっていない-近くのフリーor相手のマーカを取りに行く、マーカを取り終えたら初期位置に戻る
@@ -376,6 +416,7 @@ void war_state_navigation::cb_time_control(const ros::TimerEvent&){
         //          -相手の位置が分かっていない-相手の位置を探索する
         else if(current_time < 180.0){
             //一度だけ目標地点履歴を削除
+            static int once_flag = 1;
             if(once_flag == 1){
                 for(int i = 0;i<18;i++){
                     field_info[i][1] = 0;
@@ -383,8 +424,8 @@ void war_state_navigation::cb_time_control(const ros::TimerEvent&){
                 once_flag = -1;
             }
 
-            //勝っている
-            if(r_point <= b_point){
+            //勝っているor引き分け
+            if(our_point >= opponent_point){
                 //相手の位置が分かっている
                 if(camera_flag == 1){
                     //相手から離れた位置のマーカを取りに行く
