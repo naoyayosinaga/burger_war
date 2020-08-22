@@ -7,9 +7,14 @@
 
     <!-- sample program node -->
     <include file="$(find burger_navigation)/launch/burger_navigation.launch" >
+      <arg name="side" value="$(arg side)" />
     </include>
 
-    <node pkg="morishita" type="war_state_navigation" name="war_state_navigation" respawn="true" output="screen"/>
+    <node pkg="morishita" type="war_state_navigation" name="war_state_navigation" respawn="true" output="screen">
+      <param name="side" value="$(arg side)"/>
+    </node>
+
+    <node pkg="burger_war" type="cam_ball_recognition.py" name="cam_ball_recognition" output="screen"/>
 
     <!-- END sample program node -->
 
