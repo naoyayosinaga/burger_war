@@ -201,7 +201,9 @@ war_state_navigation::war_state_navigation(){
     origin_position.y = 0.0;
     origin_position.theta = 0.0;
 
+    //field_infoの初期化
     for(int i = 0;i<18;i++){
+        field_info[i][0] = 0;
         field_info[i][1] = 0;
     }
 }
@@ -405,7 +407,6 @@ void war_state_navigation::cb_time_control(const ros::TimerEvent&){
                 else{
                     //相手の位置を探索する
                     war_state_navigation::serch_opponent_position(amcl_position);
-                    
                 }
             }
         }
@@ -472,6 +473,9 @@ void war_state_navigation::set_near_marker_target(geometry_msgs::Pose2D current_
         }
     }
 
+    //target_numberから目標位置を決定
+    war_state_navigation::set_position(target_number);
+    /*
     //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
     //target_numberが-1なら初期位置に退避
     if(target_number != -1){
@@ -481,6 +485,7 @@ void war_state_navigation::set_near_marker_target(geometry_msgs::Pose2D current_
         war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
         //ROS_INFO("target_number lost");
     }
+    */
 }
 
 //相手から遠い位置のマーカを取得
@@ -499,7 +504,9 @@ void war_state_navigation::set_far_marker_target(geometry_msgs::Pose2D current_m
             }
         }
     }
-
+    //target_numberから目標位置を決定
+    war_state_navigation::set_position(target_number);
+    /*
     //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
     //target_numberが-1なら初期位置に退避
     if(target_number != -1){
@@ -509,6 +516,7 @@ void war_state_navigation::set_far_marker_target(geometry_msgs::Pose2D current_m
         war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
         //ROS_INFO("target_number lost");
     }
+    */
 }
 
 //相手に近づく
@@ -547,47 +555,46 @@ void war_state_navigation::serch_opponent_position(geometry_msgs::Pose2D current
         war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,get_rand_uni_double(mt64));
     }
     */
+    //到達するコーナを決める
+    //一番近くで自分のマーカではない位置を探索
+    double min_distance = 100.0;
+    int target_corner = 0;
+    for(int i=0; i<4; i++){
+        //最も近いコーナを決める
+        double distance = sqrt( (pow((current_my_position.x - corner_position[i].x),2)) + (pow((current_my_position.y - corner_position[i].y), 2) ));
+        if(distance < min_distance){
+            min_distance = distance;
+            target_corner = i;
+        }
+    }
+    //姿勢を決める
     //乱数生成器
     static std::mt19937_64 mt64(0);
-
     // [0, 2pi] の一様分布整数 (int) の分布生成器
-    std::uniform_real_distribution<double> get_rand_uni_double(origin_position.theta-0.78,origin_position.theta+0.78);
+    std::uniform_real_distribution<double> get_rand_uni_double(corner_position[target_corner].theta-M_PI/4, corner_position[target_corner].theta+M_PI/4);
     //乱数で目標角度を決定
-    war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,get_rand_uni_double(mt64));
+    war_state_navigation::navigation_goal_set(corner_position[target_corner].x,corner_position[target_corner].y,get_rand_uni_double(mt64));
 }
 
-
-//navigationの目的地を設定して、Publishする
-void war_state_navigation::navigation_goal_set(double x,double y,double theta){
-    geometry_msgs::PoseStamped goal;
-    goal.pose.position.x = x;
-    goal.pose.position.y = y;
-    tf::Quaternion quat=tf::createQuaternionFromRPY(0,0,theta);
-    geometry_msgs::Quaternion geometry_quat;
-    quaternionTFToMsg(quat, geometry_quat);
-    goal.pose.orientation = geometry_quat;
-    goal.header.frame_id = "map";
-    pub_goal.publish(goal);
-}
-
-//
+//次の機体の目標位置を設定する
 void war_state_navigation::set_position(int target_number){
     //前回のtarget_numberを保持
     static int old_target_number = -1;
-
     //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
     if(target_number != -1){
-        //前回のtarget_numberと違う場合、まずは方向転換を行う
+        //次の目標値が前回のtarget_numberと違う場合、まずは方向転換を行う
         if(old_target_number != target_number){
-            //TomatoとPuddingの場合、-90度に旋回する
-            if(old_target_number == 6 || old_target_number == 7 || old_target_number == 10 || old_target_number == 11){
-                war_state_navigation::navigation_goal_set(field_marker_position[old_target_number].x, field_marker_position[old_target_number].y, -M_PI/2);
+            //次の目標マーカがFriedShrimpの場合旋回しない
+            if(!(target_number == 14 || target_number == 15 || target_number ==16 || target_number == 17)){
+                //TomatoとPuddingの場合、-90度に旋回する
+                if(old_target_number == 6 || old_target_number == 7 || old_target_number == 10 || old_target_number == 11){
+                    war_state_navigation::navigation_goal_set(field_marker_position[old_target_number].x, field_marker_position[old_target_number].y, -M_PI/2);
+                }
+                //OmeletteとOctopusWienerの場合、90度に旋回する
+                else if(old_target_number == 8 || old_target_number == 9 || old_target_number == 12 || old_target_number == 13){
+                    war_state_navigation::navigation_goal_set(field_marker_position[old_target_number].x, field_marker_position[old_target_number].y, M_PI/2);
+                }
             }
-            //OmeletteとOctopusWienerの場合、90度に旋回する
-            else if(old_target_number == 8 || old_target_number == 9 || old_target_number == 12 || old_target_number == 13){
-                war_state_navigation::navigation_goal_set(field_marker_position[old_target_number].x, field_marker_position[old_target_number].y, M_PI/2);
-            }
-
             //old_taget_numberを更新する
             old_target_number = target_number;
         }
@@ -603,6 +610,31 @@ void war_state_navigation::set_position(int target_number){
         war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
         //ROS_INFO("target_number lost");
     }
+
+    /*
+    //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
+    //target_numberが-1なら初期位置に退避
+    if(target_number != -1){
+        war_state_navigation::navigation_goal_set(field_marker_position[target_number].x, field_marker_position[target_number].y, field_marker_position[target_number].theta);
+        field_info[target_number][1] = 1;
+    }else{
+        war_state_navigation::navigation_goal_set(origin_position.x,origin_position.y,origin_position.theta);
+        //ROS_INFO("target_number lost");
+    }
+    */
+}
+
+//navigationの目的地を設定して、Publishする
+void war_state_navigation::navigation_goal_set(double x,double y,double theta){
+    geometry_msgs::PoseStamped goal;
+    goal.pose.position.x = x;
+    goal.pose.position.y = y;
+    tf::Quaternion quat=tf::createQuaternionFromRPY(0,0,theta);
+    geometry_msgs::Quaternion geometry_quat;
+    quaternionTFToMsg(quat, geometry_quat);
+    goal.pose.orientation = geometry_quat;
+    goal.header.frame_id = "map";
+    pub_goal.publish(goal);
 }
 
 int main(int argc, char** argv)
