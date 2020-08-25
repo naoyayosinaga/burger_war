@@ -139,6 +139,8 @@ add_executable(war_state_move src/war_state_move.cpp)
 add_executable(navigation_goal_test src/navigation_goal_test.cpp)
 add_executable(simple_navigation src/simple_navigation.cpp)
 add_executable(war_state_navigation src/war_state_navigation.cpp)
+add_executable(opponent_detector src/opponent_detector.cpp)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -159,6 +161,7 @@ target_link_libraries(war_state_move ${catkin_LIBRARIES})
 target_link_libraries(navigation_goal_test ${catkin_LIBRARIES})
 target_link_libraries(simple_navigation ${catkin_LIBRARIES})
 target_link_libraries(war_state_navigation ${catkin_LIBRARIES})
+target_link_libraries(opponent_detector ${catkin_LIBRARIES})
 
 #############
 ## Install ##
