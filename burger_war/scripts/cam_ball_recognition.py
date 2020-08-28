@@ -144,8 +144,6 @@ class MovingAverage():
 			return self.result
 
 		self.values[self.index] = v
-		print self.index
-		print self.values
 
 		self.index += 1
 		if self.index >= self.size:
