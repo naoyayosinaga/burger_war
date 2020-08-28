@@ -12,11 +12,12 @@ DWAPlannerROS:
   min_trans_vel:  0.11
 
   max_rot_vel: 2.75
-  min_rot_vel: 1.37
+  min_rot_vel: 0.5
+  # min_rot_vel: 1.37
 
   acc_lim_x: 2.5
   acc_lim_y: 0.0
-  acc_lim_theta: 3.2 
+  acc_lim_theta: 3.2
 
 # Goal Tolerance Parametes
   xy_goal_tolerance: 0.1
@@ -34,7 +35,8 @@ DWAPlannerROS:
   path_distance_bias: 32.0
   goal_distance_bias: 20.0
   occdist_scale: 0.02
-  forward_point_distance: 0.325
+  #forward_point_distance: 0.325
+  forward_point_distance: 0.1
   stop_time_buffer: 0.2
   scaling_speed: 0.25
   max_scaling_factor: 0.2

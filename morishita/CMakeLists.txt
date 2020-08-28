@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  obstacle_detector
 )
 
 ## System dependencies are found with CMake's conventions
@@ -128,7 +129,7 @@ include_directories(
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -139,7 +140,9 @@ add_executable(war_state_move src/war_state_move.cpp)
 add_executable(navigation_goal_test src/navigation_goal_test.cpp)
 add_executable(simple_navigation src/simple_navigation.cpp)
 add_executable(war_state_navigation src/war_state_navigation.cpp)
+add_executable(opponent_detector src/opponent_detector.cpp)
 
+add_dependencies(opponent_detector ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -154,11 +157,13 @@ add_executable(war_state_navigation src/war_state_navigation.cpp)
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+
 target_link_libraries(war_state_test ${catkin_LIBRARIES})
 target_link_libraries(war_state_move ${catkin_LIBRARIES})
 target_link_libraries(navigation_goal_test ${catkin_LIBRARIES})
 target_link_libraries(simple_navigation ${catkin_LIBRARIES})
 target_link_libraries(war_state_navigation ${catkin_LIBRARIES})
+target_link_libraries(opponent_detector ${catkin_LIBRARIES})
 
 #############
 ## Install ##
