@@ -26,6 +26,7 @@ class opponent_detector{
     void cb_raw_obstacles(const obstacle_detector::Obstacles::ConstPtr &msg);
     void cb_cam_pose(const geometry_msgs::Pose2D::ConstPtr &msg);
     void cb_amcl_pose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
+
     void cb_time_control(const ros::TimerEvent&);
 
     //関数
@@ -40,6 +41,7 @@ class opponent_detector{
     //使用するpub/sebの定義
     ros::Subscriber sub_raw_obstacles;
     ros::Subscriber sub_cam_ball_relative_pose;
+    ros::Subscriber sub_amcl_pose;
     ros::Publisher pub_opponent_position;
     ros::Publisher pub_marker;
 
@@ -82,8 +84,12 @@ class opponent_detector{
 opponent_detector::opponent_detector(){
     sub_raw_obstacles = nh.subscribe("/raw_obstacles", 5, &opponent_detector::cb_raw_obstacles, this);
     sub_cam_ball_relative_pose = nh.subscribe("/cam_ball_relative_pose", 5, &opponent_detector::cb_cam_pose, this);
+    sub_amcl_pose = nh.subscribe("/amcl_pose", 5, &opponent_detector::cb_amcl_pose, this);
     pub_opponent_position = nh.advertise<geometry_msgs::Pose2D>("opponent_position", 1);
     pub_marker= nh.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+
+    //時間で起動する関数の定義
+    timer = nh.createTimer(ros::Duration(0.5), &opponent_detector::cb_time_control,this);
 };
 
 //コールバック関数
@@ -193,6 +199,7 @@ void opponent_detector::cb_raw_obstacles(const obstacle_detector::Obstacles::Con
                 }
             }
         }
+        before_data = filter_time;
     }
 
     //最終的に複数の位置候補がある場合、原点に近いものを使用する
@@ -280,6 +287,11 @@ void opponent_detector::cb_amcl_pose(const geometry_msgs::PoseWithCovarianceStam
 
 //cam_ball_recognitionから相手の情報を取得
 void opponent_detector::cb_cam_pose(const geometry_msgs::Pose2D::ConstPtr &msg){
+    //データを受け取ればフラグを立てて地図座標系の位置を代入
+    camera_flag = 1;
+    cam_opponent_pose.x = amcl_position.x + (msg.get()->x/1000.0) * cos(amcl_position.theta) - (msg.get()->y/1000.0) * sin(amcl_position.theta);
+    cam_opponent_pose.y = amcl_position.y + (msg.get()->x/1000.0) * sin(amcl_position.theta) + (msg.get()->y/1000.0) * cos(amcl_position.theta);
+    /*
     //カメラで相手の位置が取得出来ていない場合、前回取得した時から5秒経っている場合camera_flagをおる
     if((msg.get()->x < 0.1) && (msg.get()->y < 0.1) && (msg.get()->theta < 0.1)){
         if((ros::Time::now() - camera_time).toSec() > 5.0){
@@ -293,7 +305,9 @@ void opponent_detector::cb_cam_pose(const geometry_msgs::Pose2D::ConstPtr &msg){
         camera_flag = 1;
         cam_opponent_pose.x = amcl_position.x + (msg.get()->x/1000.0) * cos(amcl_position.theta) - (msg.get()->y/1000.0) * sin(amcl_position.theta);
         cam_opponent_pose.y = amcl_position.y + (msg.get()->x/1000.0) * sin(amcl_position.theta) + (msg.get()->y/1000.0) * cos(amcl_position.theta);
+        ROS_INFO("%f %f",cam_opponent_pose.x, cam_opponent_pose.y);
     }
+    */
 }
 
 //関数
@@ -302,6 +316,7 @@ void opponent_detector::cb_time_control(const ros::TimerEvent&){
     //camera_flagが立っているならカメラデータを使う
     if(camera_flag == 1){
         send_opponent_pose(cam_opponent_pose.x, cam_opponent_pose.y);
+        camera_flag = -1;
     }
     //obstacle_detectorから得られたデータがあれば使う
     else if(lrf_opponent_pose.size() != 0){
