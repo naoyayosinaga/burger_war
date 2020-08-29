@@ -10,6 +10,14 @@
       <arg name="side" value="$(arg side)" />
     </include>
 
+	<!-- if you use camera recognition package, uncomment below 2 nodes -->
+	<!--
+    <node pkg="burger_war" type="cam_ball_recognition.py" name="cam_ball_recognition" output="screen"/>
+
+    <node name="image_view" pkg="image_view" type="image_view">
+        <remap from="image" to="cam_ball_recog_img"/>
+    </node>
+	-->
     <node pkg="morishita" type="war_state_navigation" name="war_state_navigation" respawn="true" output="screen">
       <param name="side" value="$(arg side)"/>
     </node>
