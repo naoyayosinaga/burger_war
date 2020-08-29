@@ -36,8 +36,9 @@ class CamBallRecognition():
 	
 	def talker(self):
 		while not rospy.is_shutdown():
-			self.pub_pose.publish(self.pose)
-			self.pub_d_th.publish(self.d_th)
+			if self.pose is not None and self.d_th is not None:
+				self.pub_pose.publish(self.pose)
+				self.pub_d_th.publish(self.d_th)
 			self.pub_img.publish(self.recog_img)
 			self.pub_img_b.publish(self.recog_img_b)
 			self.r.sleep()
@@ -65,20 +66,20 @@ class CamBallRecognition():
 		self.pose = self.SetPose(distance, direction)
 
 	def BinaryProcessing(self, color_img):
-		img = cv2.cvtColor(color_img,cv2.COLOR_BGR2GRAY)
-		img = cv2.medianBlur(img,5)
-		img = img[0:200, 0:]            # clip image
+		result_img = np.zeros(color_img.shape[0:2], np.uint8)
+		color_img = color_img[0:300, 0:]            # clip image
 		
 		# hue threshold
-		hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+		hsv = cv2.cvtColor(color_img, cv2.COLOR_BGR2HSV)
 		masked_img  = cv2.inRange(hsv, (-10, 100, 100), (10, 255,255))
 		
 		# remove noise by morphology trans.
 		kernel_morph = np.ones((5,5), np.uint8)
 		masked_img = cv2.morphologyEx(masked_img, cv2.MORPH_CLOSE, kernel_morph)
 		masked_img = cv2.blur(masked_img,(5,5))
+		result_img[0:300, 0:] = masked_img
 		
-		return masked_img
+		return result_img
 
 	def HoughBallRecog(self, img_b, img_c): # img_b: binary, img_c: color
 		distance = None
@@ -99,6 +100,9 @@ class CamBallRecognition():
 		return distance, direction, img_c
 	
 	def SetDandTh(self, d, th):
+		if d is None or th is None:
+			return None
+	
 		d_th = Pose2D()
 		d_th.x = d
 		d_th.y = 0
@@ -106,6 +110,9 @@ class CamBallRecognition():
 		return d_th
 
 	def SetPose(self, d, th):
+		if d is None or th is None:
+			return None
+
 		x = 0
 		y = 0
 		th_p = 0
@@ -135,15 +142,20 @@ class MovingAverage():
     def __init__(self):
 		self.size = 5
 		self.is_full = False
+		self.is_preNone = False
 		self.values = [0] * self.size
 		self.index = 0
 		self.result = 0
 
     def add(self, v):
 		if v is None:
+			if self.is_preNone: return None
+
+			self.is_preNone = True
 			return self.result
 
 		self.values[self.index] = v
+		self.is_preNone = False
 
 		self.index += 1
 		if self.index >= self.size:
