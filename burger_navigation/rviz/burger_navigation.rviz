@@ -64,6 +64,89 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        ball:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_scan:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        caster_back_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        imu_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        poll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        red_plate:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tag1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tag1-1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tag2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tag2-1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tag3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tag3-1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_left_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_right_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -86,6 +169,42 @@ Visualization Manager:
         base_scan:
           Value: true
         caster_back_link:
+          Value: true
+        enemy_bot/ball:
+          Value: true
+        enemy_bot/base_camera:
+          Value: true
+        enemy_bot/base_footprint:
+          Value: true
+        enemy_bot/base_link:
+          Value: true
+        enemy_bot/base_scan:
+          Value: true
+        enemy_bot/blue_plate:
+          Value: true
+        enemy_bot/caster_back_link:
+          Value: true
+        enemy_bot/imu_link:
+          Value: true
+        enemy_bot/odom:
+          Value: true
+        enemy_bot/poll:
+          Value: true
+        enemy_bot/tag1:
+          Value: true
+        enemy_bot/tag1-1:
+          Value: true
+        enemy_bot/tag2:
+          Value: true
+        enemy_bot/tag2-1:
+          Value: true
+        enemy_bot/tag3:
+          Value: true
+        enemy_bot/tag3-1:
+          Value: true
+        enemy_bot/wheel_left_link:
+          Value: true
+        enemy_bot/wheel_right_link:
           Value: true
         imu_link:
           Value: true
@@ -186,14 +305,14 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /image_raw
+      Image Topic: /cam_ball_recog_img
       Max Value: 1
       Median window: 5
       Min Value: 0
       Name: Image
       Normalize Range: true
       Queue Size: 2
-      Transport Hint: compressed
+      Transport Hint: raw
       Unreliable: false
       Value: true
     - Alpha: 0.699999988
@@ -347,7 +466,7 @@ Visualization Manager:
       Marker Topic: visualization_marker
       Name: Marker
       Namespaces:
-        {}
+        control_marker: true
       Queue Size: 100
       Value: true
     - Circles color: 170; 0; 0
@@ -392,7 +511,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.57079744
+      Angle: -0.00579865091
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
@@ -402,7 +521,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 243.480759
+      Scale: 177.923294
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
       X: 0.0147779696
