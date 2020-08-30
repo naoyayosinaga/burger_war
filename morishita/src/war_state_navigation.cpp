@@ -648,7 +648,6 @@ void war_state_navigation::serch_opponent_position(geometry_msgs::Pose2D current
 
 //次の機体の目標位置を設定する
 void war_state_navigation::set_position(int target_number){
-    /*
     //前回のtarget_numberを保持
     static int old_target_number = -1;
     //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
@@ -657,6 +656,15 @@ void war_state_navigation::set_position(int target_number){
         if(old_target_number != target_number){
             //次の目標マーカがFriedShrimpの場合旋回しない
             if(!(target_number == 14 || target_number == 15 || target_number ==16 || target_number == 17)){
+                //TomatoとPuddingの場合、-90度に旋回する
+                if(amcl_position.y > 0){
+                    war_state_navigation::navigation_goal_set(amcl_position.x, amcl_position.y, -M_PI/2);
+                }
+                //OmeletteとOctopusWienerの場合、90度に旋回する
+                else{
+                    war_state_navigation::navigation_goal_set(amcl_position.x, amcl_position.y, M_PI/2);
+                }
+                /*
                 //TomatoとPuddingの場合、-90度に旋回する
                 if(old_target_number == 6 || old_target_number == 7 || old_target_number == 10 || old_target_number == 11){
                     war_state_navigation::navigation_goal_set(field_marker_position[old_target_number].x, field_marker_position[old_target_number].y, -M_PI/2);
@@ -667,6 +675,7 @@ void war_state_navigation::set_position(int target_number){
                 }else{
 
                 }
+                */
             }
             //old_taget_numberを更新する
             old_target_number = target_number;
@@ -687,7 +696,6 @@ void war_state_navigation::set_position(int target_number){
         }
         //ROS_INFO("target_number lost");
     }
-    */
     
     //target_numberが-1以外なら目標マーカの設定を行い、目標位置を設定済みにする
     //target_numberが-1なら初期位置に退避
